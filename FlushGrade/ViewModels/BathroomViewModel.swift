@@ -19,18 +19,41 @@ class BathroomViewModel: ObservableObject {
         
         do {
             let snapshot = try await db.collection("bathrooms").getDocuments()
-            let fetchedBathrooms = snapshot.documents.compactMap { document -> Bathroom? in
+            var fetchedBathrooms: [Bathroom] = []
+            
+            for document in snapshot.documents {
                 let data = document.data()
-                return Bathroom(
+                
+                let reviewsSnapshot = try await document.reference.collection("reviews").getDocuments()
+                let reviews = reviewsSnapshot.documents.compactMap { reviewDoc -> Review? in
+                    let reviewData = reviewDoc.data()
+                    return Review(
+                        id: reviewDoc.documentID,
+                        rating: reviewData["rating"] as? Double ?? 0,
+                        cleanliness: reviewData["cleanliness"] as? Int ?? 0,
+                        comment: reviewData["comment"] as? String ?? "",
+                        date: (reviewData["date"] as? Timestamp)?.dateValue() ?? Date(),
+                        userId: reviewData["userId"] as? String ?? "",
+                        userEmail: reviewData["userEmail"] as? String ?? "Anonymous User"
+                    )
+                }
+                
+                let bathroom = Bathroom(
                     id: document.documentID,
                     building: data["building"] as? String ?? "",
                     floor: data["floor"] as? Int ?? 1,
                     gender: data["gender"] as? String ?? "",
                     isAccessible: data["isAccessible"] as? Bool ?? false,
                     location: data["location"] as? String ?? "",
-                    reviews: []
+                    reviews: reviews,
+                    latitude: data["latitude"] as? Double ?? 42.3355,  // Default to BC's coordinates
+                    longitude: data["longitude"] as? Double ?? -71.1685,
+                    address: data["address"] as? String ?? ""
                 )
+                
+                fetchedBathrooms.append(bathroom)
             }
+            
             self.bathrooms = fetchedBathrooms
         } catch {
             errorMessage = "Error fetching bathrooms: \(error.localizedDescription)"
@@ -49,7 +72,10 @@ class BathroomViewModel: ObservableObject {
                 "floor": bathroom.floor,
                 "gender": bathroom.gender,
                 "isAccessible": bathroom.isAccessible,
-                "location": bathroom.location
+                "location": bathroom.location,
+                "latitude": bathroom.latitude,
+                "longitude": bathroom.longitude,
+                "address": bathroom.address  // Add this
             ]
             
             let docRef = try await db.collection("bathrooms").addDocument(data: data)
@@ -77,14 +103,21 @@ class BathroomViewModel: ObservableObject {
                 "cleanliness": review.cleanliness,
                 "comment": review.comment,
                 "date": Timestamp(date: review.date),
-                "userID": review.userID
+                "userId": review.userId,
+                "userEmail": review.userEmail
             ]
             
-            try await db.collection("bathrooms").document(bathroomId)
-                .collection("reviews").addDocument(data: reviewData)
+            let reviewRef = try await db.collection("bathrooms")
+                .document(bathroomId)
+                .collection("reviews")
+                .addDocument(data: reviewData)
             
             if let index = bathrooms.firstIndex(where: { $0.id == bathroomId }) {
-                bathrooms[index].reviews.append(review)
+                var updatedBathroom = bathrooms[index]
+                var updatedReview = review
+                updatedReview.id = reviewRef.documentID
+                updatedBathroom.reviews.append(updatedReview)
+                bathrooms[index] = updatedBathroom
             }
         } catch {
             errorMessage = "Error adding review: \(error.localizedDescription)"
@@ -108,5 +141,25 @@ class BathroomViewModel: ObservableObject {
         }
         
         return filtered
+    }
+    
+    func getUserReviewCount(for userId: String) async -> Int {
+        do {
+            var totalCount = 0
+            let snapshot = try await db.collection("bathrooms").getDocuments()
+            
+            for document in snapshot.documents {
+                let reviewsSnapshot = try await document.reference.collection("reviews")
+                    .whereField("userId", isEqualTo: userId)
+                    .getDocuments()
+                
+                totalCount += reviewsSnapshot.documents.count
+            }
+            
+            return totalCount
+        } catch {
+            print("Error getting review count: \(error.localizedDescription)")
+            return 0
+        }
     }
 }

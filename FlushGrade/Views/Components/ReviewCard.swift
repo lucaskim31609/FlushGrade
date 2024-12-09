@@ -6,7 +6,12 @@ struct ReviewCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                RatingView(rating: review.rating)
+                VStack(alignment: .leading) {
+                    RatingView(rating: review.rating)
+                    Text(review.userEmail)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
                 Spacer()
                 Text(review.date, style: .date)
                     .font(.caption)

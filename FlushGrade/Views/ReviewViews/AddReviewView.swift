@@ -1,13 +1,19 @@
 import SwiftUI
+import FirebaseAuth
 
 struct AddReviewView: View {
     let bathroom: Bathroom
-    @Environment(\.dismiss) var dismiss
-    @StateObject private var viewModel = BathroomViewModel()
+    @ObservedObject var viewModel: BathroomViewModel
+    @ObservedObject var authViewModel: AuthViewModel
     
+    @Environment(\.dismiss) var dismiss
     @State private var rating: Double = 3
     @State private var cleanliness: Int = 3
     @State private var comment: String = ""
+    
+    private var userId: String {
+        Auth.auth().currentUser?.uid ?? "anonymous"
+    }
     
     var body: some View {
         NavigationView {
@@ -52,15 +58,17 @@ struct AddReviewView: View {
     
     private func submitReview() {
         Task {
+            let currentUser = Auth.auth().currentUser
             let review = Review(
                 id: nil,
                 rating: rating,
                 cleanliness: cleanliness,
                 comment: comment,
                 date: Date(),
-                userID: "current-user-id" // This would be replaced with actual user ID when authentication is added
+                userId: currentUser?.uid ?? "anonymous",
+                userEmail: currentUser?.email ?? "Anonymous User"
             )
-            
+                
             await viewModel.addReview(to: bathroom, review: review)
             dismiss()
         }

@@ -6,18 +6,22 @@ struct ContentView: View {
     var body: some View {
         TabView {
             NavigationView {
-                BathroomListView(bathrooms: viewModel.bathrooms)
+                BathroomListView(viewModel: viewModel)
             }
             .tabItem {
                 Label("Bathrooms", systemImage: "list.bullet")
             }
             
-            Text("Map View Coming Soon!")
-                .tabItem {
-                    Label("Map", systemImage: "map")
-                }
+            NavigationView {
+                MapView(viewModel: viewModel)
+                    .navigationTitle("Map")
+                    .navigationBarTitleDisplayMode(.inline)
+            }
+            .tabItem {
+                Label("Map", systemImage: "map")
+            }
             
-            Text("Profile Coming Soon!")
+            ProfileView()
                 .tabItem {
                     Label("Profile", systemImage: "person")
                 }

@@ -2,7 +2,8 @@ import SwiftUI
 
 struct BathroomDetailView: View {
     let bathroom: Bathroom
-    @StateObject private var viewModel = BathroomViewModel()
+    @ObservedObject var viewModel: BathroomViewModel
+    @StateObject private var authViewModel = AuthViewModel()
     @State private var showingAddReview = false
     
     var body: some View {
@@ -23,7 +24,11 @@ struct BathroomDetailView: View {
             }
         }
         .sheet(isPresented: $showingAddReview) {
-            AddReviewView(bathroom: bathroom)
+            AddReviewView(
+                bathroom: bathroom,
+                viewModel: viewModel,
+                authViewModel: authViewModel
+            )
         }
     }
 }

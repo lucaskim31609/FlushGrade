@@ -13,18 +13,23 @@ struct ReviewsSection: View {
                 Text("\(reviews.count) reviews")
                     .foregroundColor(.secondary)
             }
+            .padding(.horizontal)
             
             if reviews.isEmpty {
                 Text("No reviews yet")
                     .foregroundColor(.secondary)
                     .padding()
             } else {
-                ForEach(reviews) { review in
-                    ReviewCard(review: review)
+                ScrollView {
+                    LazyVStack(spacing: 16) {
+                        ForEach(reviews.sorted { $0.date > $1.date }) { review in
+                            ReviewCard(review: review)
+                                .padding(.horizontal)
+                        }
+                    }
+                    .padding(.vertical)
                 }
             }
         }
-        .padding()
-        .background(Color(.systemBackground))
     }
 }
